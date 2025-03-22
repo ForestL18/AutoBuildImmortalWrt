@@ -1,4 +1,4 @@
-name: build-rockchip-immortalWrt-24.10.0
+name: build-rockchip-immortalWrt-24.10
 
 on:
   workflow_dispatch:
@@ -52,19 +52,19 @@ on:
           - xunlong_orangepi-r1-plus
           - xunlong_orangepi-r1-plus-lts
         required: true
-        default: 'friendlyarm_nanopi-r3s'
+        default: "friendlyarm_nanopi-r4s"
       rootfs_partsize:
-        description: '设置软件包大小 单位(MB)'
+        description: "设置软件包大小 单位(MB)"
         required: true
-        default: '1024'
+        default: "10240"
       enable_pppoe:
         description: "是否配置PPPoE拨号信息?"
         required: true
-        default: 'no'
+        default: "no"
         type: choice
         options:
-        - 'yes'
-        - 'no'
+          - "yes"
+          - "no"
       pppoe_account:
         description: "宽带账号 (若启用PPPoE)"
         required: false
@@ -82,7 +82,7 @@ jobs:
 
       - name: Set executable permissions
         run: chmod +x ${{ github.workspace }}/rockchip/build.sh
-      
+
       - name: Validate PPPoE Inputs
         run: |
           if [[ "${{ inputs.enable_pppoe }}" == "yes" ]]; then
@@ -92,15 +92,15 @@ jobs:
             fi
           fi
 
-      - name: Building Rockchip ImmortalWrt
+      - name: Build Rockchip
         run: |
           profiles="${{ github.event.inputs.profile }}"
           rootfs_partsize="${{ github.event.inputs.rootfs_partsize }}"
-          
+
           IFS=',' read -r -a profile_array <<< "$profiles"
-          
+
           for profile in "${profile_array[@]}"; do
-            echo "Building for profile: $profile"
+            echo "Build for profile: $profile"
             
             docker run --rm -i \
               --user root \
@@ -113,7 +113,7 @@ jobs:
               -e ENABLE_PPPOE=${{ inputs.enable_pppoe }} \
               -e PPPOE_ACCOUNT=${{ inputs.pppoe_account }} \
               -e PPPOE_PASSWORD=${{ inputs.pppoe_password }} \
-              immortalwrt/imagebuilder:rockchip-armv8-openwrt-24.10.0 /bin/bash /home/build/immortalwrt/build.sh
+              immortalwrt/imagebuilder:rockchip-armv8-openwrt-24.10.1 /bin/bash /home/build/immortalwrt/build.sh
           done
       - name: Generate Firmware SHA-256
         run: |
@@ -123,11 +123,25 @@ jobs:
             sha256sum -c "$file.sha256"
           done
 
-      - name: Upload ImmortWrt as release assets
+      - name: Delete old Release
+        uses: dev-drprasad/delete-tag-and-release@v1.1
+        with:
+          tag_name: Autobuild-24.10
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          delete_release: true
+
+      - name: Tag Repo
+        uses: richardsimko/update-tag@v1
+        with:
+          tag_name: Autobuild-24.10
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release
         uses: softprops/action-gh-release@v2.2.1
         with:
-          tag_name: Autobuild
-          name: ImmortWrt-Rockchip
+          tag_name: Autobuild-24.10
+          name: ImmortalWrt-Rockchip-24.10
           body_path: ${{ github.workspace }}/info.md
           files: |
             ${{ github.workspace }}/*.img.gz
