@@ -1,4 +1,4 @@
-name: build-rockchip-immortalWrt-23.05.4
+name: build-rockchip-immortalWrt-23.05
 
 on:
   workflow_dispatch:
@@ -11,40 +11,40 @@ on:
         options:
           - ariaboard_photonicat
           - armsom_sige3
-          - ezpro_mrkaio-m68s 
-          - firefly_roc-rk3328-cc 
-          - firefly_roc-rk3568-pc 
-          - friendlyarm_nanopc-t4 
-          - friendlyarm_nanopi-r2c 
-          - friendlyarm_nanopi-r2c-plus 
-          - friendlyarm_nanopi-r2s 
-          - friendlyarm_nanopi-r4s 
-          - friendlyarm_nanopi-r4s-enterprise 
-          - friendlyarm_nanopi-r4se 
-          - friendlyarm_nanopi-r5c 
-          - friendlyarm_nanopi-r5s 
-          - huake_guangmiao-g4c 
-          - lunzn_fastrhino-r66s 
-          - lunzn_fastrhino-r68s 
-          - lyt_t68m 
-          - pine64_rockpro64 
-          - radxa_rock-pi-4a 
-          - radxa_rock-pi-e 
-          - xunlong_orangepi-r1-plus 
+          - ezpro_mrkaio-m68s
+          - firefly_roc-rk3328-cc
+          - firefly_roc-rk3568-pc
+          - friendlyarm_nanopc-t4
+          - friendlyarm_nanopi-r2c
+          - friendlyarm_nanopi-r2c-plus
+          - friendlyarm_nanopi-r2s
+          - friendlyarm_nanopi-r4s
+          - friendlyarm_nanopi-r4s-enterprise
+          - friendlyarm_nanopi-r4se
+          - friendlyarm_nanopi-r5c
+          - friendlyarm_nanopi-r5s
+          - huake_guangmiao-g4c
+          - lunzn_fastrhino-r66s
+          - lunzn_fastrhino-r68s
+          - lyt_t68m
+          - pine64_rockpro64
+          - radxa_rock-pi-4a
+          - radxa_rock-pi-e
+          - xunlong_orangepi-r1-plus
           - xunlong_orangepi-r1-plus-lts
-        default: 'friendlyarm_nanopi-r4s'
+        default: "friendlyarm_nanopi-r4s"
       rootfs_partsize:
-        description: '设置软件包大小 单位(MB)'
+        description: "设置软件包大小 单位(MB)"
         required: true
-        default: '1024'
+        default: "10240"
       enable_pppoe:
         description: "是否配置PPPoE拨号信息?"
         required: true
-        default: 'no'
+        default: "no"
         type: choice
         options:
-        - 'yes'
-        - 'no'
+          - "yes"
+          - "no"
       pppoe_account:
         description: "宽带账号 (若启用PPPoE)"
         required: false
@@ -61,7 +61,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set executable permissions
-        run: chmod +x ${{ github.workspace }}/rockchip/23.05.4/build.sh
+        run: chmod +x ${{ github.workspace }}/rockchip/23.05/build.sh
 
       - name: Validate PPPoE Inputs
         run: |
@@ -72,22 +72,22 @@ jobs:
             fi
           fi
 
-      - name: Building Rockchip ImmortalWrt
+      - name: Build Rockchip
         run: |
           profiles="${{ github.event.inputs.profile }}"
           rootfs_partsize="${{ github.event.inputs.rootfs_partsize }}"
-          
+
           IFS=',' read -r -a profile_array <<< "$profiles"
-          
+
           for profile in "${profile_array[@]}"; do
-            echo "Building for profile: $profile"
+            echo "Build for profile: $profile"
             
             docker run --rm -i \
               --user root \
               -v "${{ github.workspace }}/bin:/home/build/immortalwrt/bin" \
               -v "${{ github.workspace }}/files:/home/build/immortalwrt/files" \
               -v "${{ github.workspace }}/rockchip/imm.config:/home/build/immortalwrt/.config" \
-              -v "${{ github.workspace }}/rockchip/23.05.4/build.sh:/home/build/immortalwrt/build.sh" \
+              -v "${{ github.workspace }}/rockchip/23.05/build.sh:/home/build/immortalwrt/build.sh" \
               -e PROFILE=$profile \
               -e ROOTFS_PARTSIZE=$rootfs_partsize \
               -e ENABLE_PPPOE=${{ inputs.enable_pppoe }} \
@@ -104,11 +104,25 @@ jobs:
             sha256sum -c "$file.sha256"
           done
 
-      - name: Upload ImmortWrt as release assets
+      - name: Delete old Release
+        uses: dev-drprasad/delete-tag-and-release@v1.1
+        with:
+          tag_name: Autobuild-23.05
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          delete_release: true
+
+      - name: Tag Repo
+        uses: richardsimko/update-tag@v1
+        with:
+          tag_name: Autobuild-23.05
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release
         uses: softprops/action-gh-release@v2.2.1
         with:
-          tag_name: Autobuild-23.05.4
-          name: ImmortWrt-Rockchip
+          tag_name: Autobuild-23.05
+          name: ImmortalWrt-Rockchip-23.05
           body_path: ${{ github.workspace }}/info.md
           files: |
             ${{ github.workspace }}/*.img.gz
